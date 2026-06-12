@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useCallback, useState, useRef } from 'react'
+import CameraPage from './pages/CameraPage'
 
 type AppPage = 'landing' | 'camera' | 'gallery'
 
@@ -7,6 +8,7 @@ function App() {
   const [currentPage, setCurrentPage] = useState<AppPage>(
     isReturningUser ? 'camera' : 'landing'
   )
+  const photosRef = useRef<Blob[]>([])
 
   const navigateTo = (page: AppPage) => {
     if (page === 'camera') {
@@ -14,6 +16,10 @@ function App() {
     }
     setCurrentPage(page)
   }
+
+  const handlePhotoCapture = useCallback((blob: Blob) => {
+    photosRef.current.push(blob)
+  }, [])
 
   return (
     <div className="h-full w-full bg-black">
@@ -34,9 +40,7 @@ function App() {
       )}
 
       {currentPage === 'camera' && (
-        <div className="flex h-full items-center justify-center text-gray-500">
-          Camera Page (em breve)
-        </div>
+        <CameraPage onPhotoCapture={handlePhotoCapture} />
       )}
 
       {currentPage === 'gallery' && (
