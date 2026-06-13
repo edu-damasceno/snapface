@@ -1,33 +1,45 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { FaceDetectionProvider, useFaceDetection } from '../contexts/FaceDetectionContext';
+import { useGallery } from '../contexts/GalleryContext';
 import { ReactMediaPipe } from '../lib/ReactMediaPipe';
 import type { ReactMediaPipeRef } from '../lib/ReactMediaPipe';
 import { useAutoCapture } from '../hooks/useAutoCapture';
 import { useFaceValidation } from '../hooks/useFaceValidation';
+import { useCaptureFormat } from '../hooks/useCaptureFormat';
+import { useSettings } from '../hooks/useSettings';
+import { processImage } from '../utils/formatProcessor';
 import { CaptureFlash } from '../components/CaptureFlash';
+import { FaceGuide } from '../components/FaceGuide';
+import { GuidanceText } from '../components/GuidanceText';
+import { FormatSelector } from '../components/FormatSelector';
+import { ThumbnailStrip } from '../components/ThumbnailStrip';
+import { PhotoPreview } from '../components/PhotoPreview';
+import { SettingsPanel } from '../components/SettingsPanel';
 import { COOLDOWN_MS } from '../utils/constants';
 
-interface CameraPageProps {
-  onPhotoCapture?: (blob: Blob) => void;
-}
-
-const CameraContent: React.FC<CameraPageProps> = ({ onPhotoCapture }) => {
+const CameraContent: React.FC = () => {
   const mediaPipeRef = useRef<ReactMediaPipeRef>(null);
   const {
     currentFaceData,
     validationDetails,
+    isFaceDetected,
     isCaptureValid,
     onFaceFrameProcessed,
   } = useFaceDetection();
   const { validate } = useFaceValidation();
+  const { currentFormat, selectFormat } = useCaptureFormat();
+  const { settings } = useSettings();
+  const { photos, addPhoto, removePhoto } = useGallery();
 
   const [flashTrigger, setFlashTrigger] = useState(0);
-  const [photoCount, setPhotoCount] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [showFormatSelector, setShowFormatSelector] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [previewPhotoId, setPreviewPhotoId] = useState<string | null>(null);
   const cooldownRef = useRef(false);
 
-  // Validate face data on every frame
+  // Update validation deviation when format changes
   useEffect(() => {
     validate(currentFaceData);
   }, [currentFaceData, validate]);
@@ -38,13 +50,18 @@ const CameraContent: React.FC<CameraPageProps> = ({ onPhotoCapture }) => {
 
     try {
       const image = await mediaPipeRef.current.captureImage();
-      const blob = await image.toBlob();
+      const rawBlob = await image.toBlob();
 
-      // Flash effect
+      // Process image with current format
+      const processedBlob = await processImage(rawBlob, {
+        format: currentFormat,
+        faceWidthInPreview: currentFaceData?.width,
+        mirror: settings.mirrorSavedPhoto,
+        jpegQuality: settings.jpegQuality,
+      });
+
       setFlashTrigger(prev => prev + 1);
-      setPhotoCount(prev => prev + 1);
-
-      onPhotoCapture?.(blob);
+      addPhoto(processedBlob, currentFormat.id);
 
       // Cooldown
       cooldownRef.current = true;
@@ -57,43 +74,23 @@ const CameraContent: React.FC<CameraPageProps> = ({ onPhotoCapture }) => {
       console.error('[CameraPage] Capture failed:', error);
       return false;
     }
-  }, [onPhotoCapture]);
+  }, [currentFormat, currentFaceData?.width, settings.mirrorSavedPhoto, settings.jpegQuality, addPhoto]);
 
   const { countdown, isStable, isActive } = useAutoCapture(
     currentFaceData,
     validationDetails,
     isCaptureValid && !isPaused,
     handleAutoCapture,
-    { enabled: !isPaused }
+    {
+      enabled: !isPaused,
+      countdownDuration: settings.captureDelay * 1000,
+    }
   );
-
-  // Determine border color based on state
-  const getBorderColor = () => {
-    if (!currentFaceData) return 'border-transparent';
-    if (isActive) return 'border-green-400 animate-pulse';
-    if (isStable) return 'border-green-400';
-    if (validationDetails?.overall) return 'border-green-400';
-    return 'border-yellow-400';
-  };
-
-  // Guidance text
-  const getGuidanceText = () => {
-    if (countdown > 0) return String(countdown);
-    if (!currentFaceData) return 'Posicione seu rosto no centro';
-    if (validationDetails?.distanceType === 'too_far') return 'Aproxime-se';
-    if (validationDetails?.distanceType === 'too_close') return 'Afaste-se';
-    if (!validationDetails?.faceOrientation) return 'Olhe para frente';
-    if (!validationDetails?.facePosition) return 'Centralize o rosto';
-    if (!validationDetails?.faceInFrame) return 'Rosto fora do quadro';
-    if (isStable) return 'Mantenha a posição...';
-    if (validationDetails?.overall) return 'Estabilizando...';
-    return 'Posicione seu rosto no centro';
-  };
 
   return (
     <div className="relative flex h-full w-full flex-col bg-black">
       {/* Camera view */}
-      <div className="relative flex-1">
+      <div className="relative flex-1 overflow-hidden">
         <ReactMediaPipe
           ref={mediaPipeRef}
           classes={['w-full', 'h-full', 'relative']}
@@ -101,6 +98,7 @@ const CameraContent: React.FC<CameraPageProps> = ({ onPhotoCapture }) => {
           onFaceFrameProcessed={onFaceFrameProcessed}
           enableDetection={!isPaused}
           onLoadingChange={setIsLoading}
+          jpegQuality={settings.jpegQuality}
           loadingComponent={
             <div className="flex h-full w-full items-center justify-center bg-black">
               <div className="text-center">
@@ -110,58 +108,100 @@ const CameraContent: React.FC<CameraPageProps> = ({ onPhotoCapture }) => {
             </div>
           }
         >
-          {/* Face guide border */}
           {!isLoading && (
-            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-              <div
-                className={`h-64 w-52 rounded-[50%] border-4 transition-colors duration-200 ${getBorderColor()}`}
+            <>
+              <FaceGuide
+                isFaceDetected={isFaceDetected}
+                validationDetails={validationDetails}
+                isStable={isStable}
+                isActive={isActive}
+                guideShape={currentFormat.guideShape}
               />
-            </div>
-          )}
-
-          {/* Guidance text */}
-          {!isLoading && (
-            <div className="pointer-events-none absolute bottom-24 left-0 right-0 text-center">
-              <span
-                className={`inline-block rounded-full bg-black/60 px-6 py-2 text-sm font-medium text-white backdrop-blur-sm ${
-                  countdown > 0 ? 'text-4xl font-bold' : ''
-                }`}
-              >
-                {getGuidanceText()}
-              </span>
-            </div>
+              <GuidanceText
+                isFaceDetected={isFaceDetected}
+                validationDetails={validationDetails}
+                isStable={isStable}
+                countdown={countdown}
+              />
+            </>
           )}
         </ReactMediaPipe>
+
+        {/* Settings button */}
+        {!isLoading && (
+          <button
+            onClick={() => setShowSettings(true)}
+            className="absolute right-4 top-4 rounded-full bg-black/40 p-2 text-white backdrop-blur-sm active:bg-black/60"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </button>
+        )}
       </div>
 
+      {/* Thumbnail strip */}
+      <ThumbnailStrip
+        photos={photos}
+        onPhotoClick={setPreviewPhotoId}
+      />
+
       {/* Bottom bar */}
-      <div className="flex items-center justify-between bg-black/90 px-6 py-4">
+      <div className="flex items-center justify-between bg-black px-4 py-3">
         {/* Photo count */}
-        <div className="min-w-[60px] text-sm text-gray-400">
-          {photoCount > 0 && `${photoCount} foto${photoCount > 1 ? 's' : ''}`}
+        <div className="min-w-[70px] text-xs text-gray-500">
+          {photos.length > 0 && `${photos.length} foto${photos.length > 1 ? 's' : ''}`}
         </div>
 
-        {/* Pause/Resume button */}
+        {/* Pause/Resume */}
         <button
           onClick={() => setIsPaused(prev => !prev)}
-          className="rounded-full bg-white/10 px-6 py-3 text-sm font-medium text-white transition-colors active:bg-white/20"
+          className="rounded-full bg-white/10 px-5 py-2 text-sm font-medium text-white active:bg-white/20"
         >
           {isPaused ? 'Retomar' : 'Pausar'}
         </button>
 
-        {/* Placeholder for format selector */}
-        <div className="min-w-[60px]" />
+        {/* Format selector */}
+        <button
+          onClick={() => setShowFormatSelector(true)}
+          className="min-w-[70px] text-right text-xs text-gray-400 active:text-white"
+        >
+          {currentFormat.icon} {currentFormat.label}
+        </button>
       </div>
 
+      {/* Overlays */}
       <CaptureFlash trigger={flashTrigger} />
+
+      <FormatSelector
+        isOpen={showFormatSelector}
+        currentFormat={currentFormat}
+        onSelect={selectFormat}
+        onClose={() => setShowFormatSelector(false)}
+      />
+
+      <SettingsPanel
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
+      />
+
+      {previewPhotoId && (
+        <PhotoPreview
+          photos={photos}
+          initialPhotoId={previewPhotoId}
+          onClose={() => setPreviewPhotoId(null)}
+          onDelete={removePhoto}
+        />
+      )}
     </div>
   );
 };
 
-const CameraPage: React.FC<CameraPageProps> = (props) => {
+const CameraPage: React.FC = () => {
   return (
     <FaceDetectionProvider>
-      <CameraContent {...props} />
+      <CameraContent />
     </FaceDetectionProvider>
   );
 };
