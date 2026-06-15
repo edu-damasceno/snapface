@@ -1,0 +1,6 @@
+services:
+  web:
+    build: .
+    ports:
+      - "127.0.0.1:8003:80"
+    restart: unless-stopped
