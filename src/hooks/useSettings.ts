@@ -11,7 +11,7 @@ const STORAGE_KEY = 'snapface_settings';
 const defaultSettings: AppSettings = {
   captureDelay: 3,
   jpegQuality: 0.85,
-  mirrorSavedPhoto: true,
+  mirrorSavedPhoto: false,
 };
 
 function loadSettings(): AppSettings {

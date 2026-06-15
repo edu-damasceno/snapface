@@ -153,8 +153,9 @@ export class MediaPipeFaceDetection {
     const rotation = this.calculateHeadRotation(landmarksPixels);
     const direction = this.detectDirection(rotation.y, rotation.x);
 
-    const EDGE_MARGIN_HORIZONTAL = 10;
-    const EDGE_MARGIN_VERTICAL = 30;
+    // Edge detection: scale margins proportionally to resolution
+    const EDGE_MARGIN_HORIZONTAL = videoWidth * 0.014;  // ~10px at 720
+    const EDGE_MARGIN_VERTICAL = videoHeight * 0.054;    // ~30px at 560
 
     const outOfFrameEdges = {
       left: minX < EDGE_MARGIN_HORIZONTAL,
@@ -165,10 +166,15 @@ export class MediaPipeFaceDetection {
     const isPartiallyOutOfFrame = outOfFrameEdges.left || outOfFrameEdges.right ||
                                    outOfFrameEdges.top || outOfFrameEdges.bottom;
 
+    // Normalize width/height/position to 720px reference frame
+    // so all downstream thresholds (calibrated for 720x560) stay valid
+    const REFERENCE_WIDTH = 720;
+    const normScale = REFERENCE_WIDTH / videoWidth;
+
     return {
-      width,
-      height,
-      position,
+      width: width * normScale,
+      height: height * normScale,
+      position: position * normScale,
       direction,
       landmarks: landmarksPixels,
       rotation,

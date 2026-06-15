@@ -1,21 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { FaceDetectionProvider, useFaceDetection } from '../contexts/FaceDetectionContext';
-import { useGallery } from '../contexts/GalleryContext';
 import { ReactMediaPipe } from '../lib/ReactMediaPipe';
 import type { ReactMediaPipeRef } from '../lib/ReactMediaPipe';
 import { useAutoCapture } from '../hooks/useAutoCapture';
 import { useFaceValidation } from '../hooks/useFaceValidation';
-import { useCaptureFormat } from '../hooks/useCaptureFormat';
-import { useSettings } from '../hooks/useSettings';
 import { processImage } from '../utils/formatProcessor';
+import { DEFAULT_FORMAT } from '../types/CaptureFormat';
 import { CaptureFlash } from '../components/CaptureFlash';
-import { FaceGuide } from '../components/FaceGuide';
 import { GuidanceText } from '../components/GuidanceText';
-import { FormatSelector } from '../components/FormatSelector';
-import { ThumbnailStrip } from '../components/ThumbnailStrip';
-import { PhotoPreview } from '../components/PhotoPreview';
-import { SettingsPanel } from '../components/SettingsPanel';
-import { COOLDOWN_MS } from '../utils/constants';
+
+const CAPTURE_DELAY_MS = 3000;
+const JPEG_QUALITY = 1.0;
+const MAX_CAPTURE_RETRIES = 3;
+const RETRY_DELAY_MS = 300;
 
 const CameraContent: React.FC = () => {
   const mediaPipeRef = useRef<ReactMediaPipeRef>(null);
@@ -27,172 +24,323 @@ const CameraContent: React.FC = () => {
     onFaceFrameProcessed,
   } = useFaceDetection();
   const { validate } = useFaceValidation();
-  const { currentFormat, selectFormat } = useCaptureFormat();
-  const { settings } = useSettings();
-  const { photos, addPhoto, removePhoto } = useGallery();
 
   const [flashTrigger, setFlashTrigger] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [showFormatSelector, setShowFormatSelector] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
-  const [previewPhotoId, setPreviewPhotoId] = useState<string | null>(null);
-  const cooldownRef = useRef(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [capturedBlob, setCapturedBlob] = useState<Blob | null>(null);
+  const [capturedUrl, setCapturedUrl] = useState<string | null>(null);
+  const [isMirrored, setIsMirrored] = useState(false);
 
-  // Update validation deviation when format changes
   useEffect(() => {
     validate(currentFaceData);
   }, [currentFaceData, validate]);
 
-  // Auto-capture callback
+  // Cleanup blob URL on unmount or when photo changes
+  useEffect(() => {
+    return () => {
+      if (capturedUrl) URL.revokeObjectURL(capturedUrl);
+    };
+  }, [capturedUrl]);
+
   const handleAutoCapture = useCallback(async (): Promise<boolean> => {
-    if (cooldownRef.current || !mediaPipeRef.current) return false;
+    if (!mediaPipeRef.current) return false;
 
-    try {
-      const image = await mediaPipeRef.current.captureImage();
-      const rawBlob = await image.toBlob();
+    setFlashTrigger(prev => prev + 1);
+    setIsProcessing(true);
 
-      // Process image with current format
-      const processedBlob = await processImage(rawBlob, {
-        format: currentFormat,
-        faceWidthInPreview: currentFaceData?.width,
-        mirror: settings.mirrorSavedPhoto,
-        jpegQuality: settings.jpegQuality,
-      });
+    // Retry loop: up to MAX_CAPTURE_RETRIES attempts
+    for (let attempt = 1; attempt <= MAX_CAPTURE_RETRIES; attempt++) {
+      try {
+        const image = await mediaPipeRef.current.captureImage();
+        const rawBlob = await image.toBlob();
 
-      setFlashTrigger(prev => prev + 1);
-      addPhoto(processedBlob, currentFormat.id);
+        const processedBlob = await processImage(rawBlob, {
+          format: DEFAULT_FORMAT,
+          faceWidthInPreview: currentFaceData?.width,
+          mirror: false,
+          jpegQuality: JPEG_QUALITY,
+        });
 
-      // Cooldown
-      cooldownRef.current = true;
-      setTimeout(() => {
-        cooldownRef.current = false;
-      }, COOLDOWN_MS);
+        const url = URL.createObjectURL(processedBlob);
+        setCapturedBlob(processedBlob);
+        setCapturedUrl(url);
+        setIsProcessing(false);
 
-      return true;
-    } catch (error) {
-      console.error('[CameraPage] Capture failed:', error);
-      return false;
+        return true;
+      } catch (error) {
+        console.error(`[CameraPage] Capture attempt ${attempt} failed:`, error);
+        if (attempt < MAX_CAPTURE_RETRIES) {
+          await new Promise(r => setTimeout(r, RETRY_DELAY_MS));
+          continue;
+        }
+        setIsProcessing(false);
+        return false;
+      }
     }
-  }, [currentFormat, currentFaceData?.width, settings.mirrorSavedPhoto, settings.jpegQuality, addPhoto]);
+
+    setIsProcessing(false);
+    return false;
+  }, [currentFaceData?.width]);
+
+  const isCapturing = capturedBlob === null && !isProcessing;
 
   const { countdown, isStable, isActive } = useAutoCapture(
     currentFaceData,
     validationDetails,
-    isCaptureValid && !isPaused,
+    isCaptureValid && isCapturing,
     handleAutoCapture,
     {
-      enabled: !isPaused,
-      countdownDuration: settings.captureDelay * 1000,
+      enabled: isCapturing,
+      countdownDuration: CAPTURE_DELAY_MS,
     }
   );
 
+  const handleRetake = useCallback(() => {
+    if (capturedUrl) URL.revokeObjectURL(capturedUrl);
+    setCapturedBlob(null);
+    setCapturedUrl(null);
+    setIsMirrored(false);
+  }, [capturedUrl]);
+
+  /** If user toggled mirror, re-encode with horizontal flip; otherwise return original blob */
+  const getFinalBlob = useCallback((): Promise<Blob> => {
+    if (!capturedBlob) return Promise.reject(new Error('No photo'));
+    if (!isMirrored) return Promise.resolve(capturedBlob);
+
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext('2d')!;
+        ctx.scale(-1, 1);
+        ctx.translate(-canvas.width, 0);
+        ctx.drawImage(img, 0, 0);
+        canvas.toBlob((blob) => {
+          canvas.width = 0;
+          canvas.height = 0;
+          resolve(blob ?? capturedBlob);
+        }, 'image/jpeg', JPEG_QUALITY);
+      };
+      img.onerror = () => resolve(capturedBlob);
+      img.src = URL.createObjectURL(capturedBlob);
+    });
+  }, [capturedBlob, isMirrored]);
+
+  const handleDownload = useCallback(async () => {
+    const blob = await getFinalBlob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `snapface_${Date.now()}.jpg`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, [getFinalBlob]);
+
+  const handleShare = useCallback(async () => {
+    if (!('share' in navigator)) return;
+    try {
+      const blob = await getFinalBlob();
+      const file = new File([blob], `snapface_${Date.now()}.jpg`, { type: 'image/jpeg' });
+      await navigator.share({ files: [file] });
+    } catch {
+      // User cancelled or share failed
+    }
+  }, [getFinalBlob]);
+
+  // Confirmation screen — photo full-screen with floating buttons
+  if (capturedUrl) {
+    return (
+      <div className="relative h-full w-full bg-black">
+        {/* Full-screen photo */}
+        <img
+          src={capturedUrl}
+          alt="Foto capturada"
+          className="h-full w-full object-contain"
+          style={{ transform: isMirrored ? 'scaleX(-1)' : 'none' }}
+        />
+
+        {/* Top gradient + header */}
+        <div
+          className="absolute inset-x-0 top-0 px-8 pb-16"
+          style={{
+            paddingTop: 'max(env(safe-area-inset-top, 20px), 48px)',
+            background: 'linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 55%, transparent 100%)',
+          }}
+        >
+          <p className="text-center text-sm font-medium leading-relaxed text-white">
+            Confira se seu rosto está focado<br />e fácil de identificar.
+          </p>
+        </div>
+
+        {/* Bottom gradient + circular buttons */}
+        <div
+          className="absolute inset-x-0 bottom-0 pt-24"
+          style={{
+            paddingBottom: 'max(env(safe-area-inset-bottom, 16px), 36px)',
+            background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.5) 40%, transparent 100%)',
+          }}
+        >
+          <div className="flex items-start justify-center gap-6">
+            {/* Espelhar */}
+            <button
+              onClick={() => setIsMirrored(prev => !prev)}
+              className="flex flex-col items-center gap-2 active:opacity-70"
+            >
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/15 backdrop-blur-md">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 7h16m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                </svg>
+              </div>
+              <span className="text-xs text-white/70">Espelhar</span>
+            </button>
+
+            {/* Baixar */}
+            <button
+              onClick={handleDownload}
+              className="flex flex-col items-center gap-2 active:opacity-70"
+            >
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+              </div>
+              <span className="text-xs font-medium text-white">Baixar</span>
+            </button>
+
+            {'share' in navigator && (
+              <>
+                {/* Compartilhar */}
+                <button
+                  onClick={handleShare}
+                  className="flex flex-col items-center gap-2 active:opacity-70"
+                >
+                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/15 backdrop-blur-md">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                    </svg>
+                  </div>
+                  <span className="text-xs text-white/70">Compartilhar</span>
+                </button>
+              </>
+            )}
+
+            {/* Tirar outra */}
+            <button
+              onClick={handleRetake}
+              className="flex flex-col items-center gap-2 active:opacity-70"
+            >
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/15 backdrop-blur-md">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+              </div>
+              <span className="text-xs text-white/70">Tirar outra</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Camera view
   return (
-    <div className="relative flex h-full w-full flex-col bg-black">
-      {/* Camera view */}
-      <div className="relative flex-1 overflow-hidden">
+    <div className="relative flex h-full w-full items-center justify-center bg-black">
+      {/* App title */}
+      <div
+        className="absolute inset-x-0 top-0 text-center"
+        style={{ paddingTop: 'max(env(safe-area-inset-top, 20px), 48px)' }}
+      >
+        <h1 className="text-lg font-semibold tracking-wide text-white/90">SnapFace</h1>
+      </div>
+
+      {/* Guidance text — absolute above circle, won't affect circle position */}
+      {!isLoading && !isProcessing && (
+        <div className="absolute left-0 right-0" style={{ bottom: 'calc(50% + clamp(130px, min(45vw, 27.5dvh), 195px) + 24px)' }}>
+          <GuidanceText
+            isFaceDetected={isFaceDetected}
+            validationDetails={validationDetails}
+            isStable={isStable}
+            countdown={countdown}
+          />
+        </div>
+      )}
+
+      {/* Circular video container — hidden during loading so spinner shows centered */}
+      <div
+        className="relative overflow-hidden rounded-full"
+        style={{
+          width: 'clamp(260px, min(90vw, 55dvh), 390px)',
+          height: 'clamp(260px, min(90vw, 55dvh), 390px)',
+          visibility: isLoading ? 'hidden' : 'visible',
+        }}
+      >
         <ReactMediaPipe
           ref={mediaPipeRef}
           classes={['w-full', 'h-full', 'relative']}
           styles={{ position: 'relative' }}
           onFaceFrameProcessed={onFaceFrameProcessed}
-          enableDetection={!isPaused}
+          enableDetection={isCapturing}
           onLoadingChange={setIsLoading}
-          jpegQuality={settings.jpegQuality}
-          loadingComponent={
-            <div className="flex h-full w-full items-center justify-center bg-black">
-              <div className="text-center">
-                <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-4 border-white/20 border-t-white" />
-                <p className="text-sm text-gray-400">Carregando câmera...</p>
-              </div>
-            </div>
-          }
-        >
-          {!isLoading && (
-            <>
-              <FaceGuide
-                isFaceDetected={isFaceDetected}
-                validationDetails={validationDetails}
-                isStable={isStable}
-                isActive={isActive}
-                guideShape={currentFormat.guideShape}
-              />
-              <GuidanceText
-                isFaceDetected={isFaceDetected}
-                validationDetails={validationDetails}
-                isStable={isStable}
-                countdown={countdown}
-              />
-            </>
-          )}
-        </ReactMediaPipe>
+          jpegQuality={JPEG_QUALITY}
+        />
 
-        {/* Settings button */}
+        {/* Crosshair guide — fades out when face is well positioned */}
         {!isLoading && (
-          <button
-            onClick={() => setShowSettings(true)}
-            className="absolute right-4 top-4 rounded-full bg-black/40 p-2 text-white backdrop-blur-sm active:bg-black/60"
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{
+              opacity: isFaceDetected && isCaptureValid ? 0 : isFaceDetected ? 0.12 : 0.3,
+              transition: 'opacity 0.5s ease',
+            }}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-          </button>
+            {/* Horizontal line */}
+            <div className="absolute left-[20%] right-[20%] top-1/2 h-px bg-white" />
+            {/* Vertical line */}
+            <div className="absolute bottom-[20%] top-[20%] left-1/2 w-px bg-white" />
+          </div>
+        )}
+
+        {/* Dashed border overlay */}
+        {!isLoading && (
+          <div
+            className="pointer-events-none absolute inset-0 rounded-full"
+            style={{
+              border: `3px dashed ${
+                !isFaceDetected
+                  ? 'rgba(255,255,255,0.3)'
+                  : isActive || isStable || validationDetails?.overall
+                    ? 'rgba(74,222,128,1)'
+                    : 'rgba(250,204,21,1)'
+              }`,
+              transition: 'border-color 0.2s',
+            }}
+          />
         )}
       </div>
 
-      {/* Thumbnail strip */}
-      <ThumbnailStrip
-        photos={photos}
-        onPhotoClick={setPreviewPhotoId}
-      />
-
-      {/* Bottom bar */}
-      <div className="flex items-center justify-between bg-black px-4 py-3">
-        {/* Photo count */}
-        <div className="min-w-[70px] text-xs text-gray-500">
-          {photos.length > 0 && `${photos.length} foto${photos.length > 1 ? 's' : ''}`}
-        </div>
-
-        {/* Pause/Resume */}
-        <button
-          onClick={() => setIsPaused(prev => !prev)}
-          className="rounded-full bg-white/10 px-5 py-2 text-sm font-medium text-white active:bg-white/20"
-        >
-          {isPaused ? 'Retomar' : 'Pausar'}
-        </button>
-
-        {/* Format selector */}
-        <button
-          onClick={() => setShowFormatSelector(true)}
-          className="min-w-[70px] text-right text-xs text-gray-400 active:text-white"
-        >
-          {currentFormat.icon} {currentFormat.label}
-        </button>
-      </div>
-
-      {/* Overlays */}
       <CaptureFlash trigger={flashTrigger} />
 
-      <FormatSelector
-        isOpen={showFormatSelector}
-        currentFormat={currentFormat}
-        onSelect={selectFormat}
-        onClose={() => setShowFormatSelector(false)}
-      />
+      {/* Loading overlay — full screen, outside circular container */}
+      {isLoading && (
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center">
+          <div className="mb-4 h-12 w-12 animate-spin rounded-full border-4 border-white/20 border-t-white" />
+          <p className="text-sm text-gray-400">Carregando câmera...</p>
+        </div>
+      )}
 
-      <SettingsPanel
-        isOpen={showSettings}
-        onClose={() => setShowSettings(false)}
-      />
-
-      {previewPhotoId && (
-        <PhotoPreview
-          photos={photos}
-          initialPhotoId={previewPhotoId}
-          onClose={() => setPreviewPhotoId(null)}
-          onDelete={removePhoto}
-        />
+      {/* Processing overlay */}
+      {isProcessing && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/60">
+          <div className="text-center">
+            <div className="mx-auto mb-3 h-10 w-10 animate-spin rounded-full border-4 border-white/20 border-t-white" />
+            <p className="text-sm font-medium text-white/80">Processando foto...</p>
+          </div>
+        </div>
       )}
     </div>
   );

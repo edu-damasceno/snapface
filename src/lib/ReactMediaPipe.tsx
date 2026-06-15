@@ -44,8 +44,20 @@ export interface MediaPipeCapturedImage {
   toBlob(): Promise<Blob>;
 }
 
+export interface VideoDimensions {
+  /** CSS display width of the video element */
+  clientWidth: number;
+  /** CSS display height of the video element */
+  clientHeight: number;
+  /** Native video resolution width */
+  videoWidth: number;
+  /** Native video resolution height */
+  videoHeight: number;
+}
+
 export interface ReactMediaPipeRef {
   captureImage(): Promise<MediaPipeCapturedImage>;
+  getVideoDimensions(): VideoDimensions | null;
   stopSelfie(): void;
 }
 
@@ -103,9 +115,9 @@ export const ReactMediaPipe = forwardRef<ReactMediaPipeRef, ReactMediaPipeProps>
     const getAdaptiveResolution = useCallback((): { width: number; height: number } => {
       const memoryInfo = (navigator as any).deviceMemory;
       if (memoryInfo && memoryInfo >= 4) {
-        return { width: 720, height: 560 };
+        return { width: 1920, height: 1080 };
       }
-      return { width: 640, height: 480 };
+      return { width: 1280, height: 720 };
     }, []);
 
     const setupVideoWithEvents = useCallback((video: HTMLVideoElement, stream: MediaStream): Promise<void> => {
@@ -227,8 +239,8 @@ export const ReactMediaPipe = forwardRef<ReactMediaPipeRef, ReactMediaPipeProps>
           stream = await navigator.mediaDevices.getUserMedia({
             video: {
               facingMode: 'user',
-              width: adaptiveResolution.width,
-              height: adaptiveResolution.height
+              width: { ideal: adaptiveResolution.width },
+              height: { ideal: adaptiveResolution.height },
             },
             audio: false
           });
@@ -344,6 +356,16 @@ export const ReactMediaPipe = forwardRef<ReactMediaPipeRef, ReactMediaPipeProps>
             })
           };
         },
+        getVideoDimensions(): VideoDimensions | null {
+          const video = videoRef.current;
+          if (!video) return null;
+          return {
+            clientWidth: video.clientWidth,
+            clientHeight: video.clientHeight,
+            videoWidth: video.videoWidth,
+            videoHeight: video.videoHeight,
+          };
+        },
         stopSelfie(): void {
           cleanupCamera();
         }
@@ -390,6 +412,7 @@ export const ReactMediaPipe = forwardRef<ReactMediaPipeRef, ReactMediaPipeProps>
             width: '100%',
             height: '100%',
             objectFit: 'cover',
+            transform: 'scaleX(-1)',
             display: loading ? 'none' : 'block'
           }}
         />

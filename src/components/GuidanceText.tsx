@@ -29,10 +29,10 @@ export const GuidanceText: React.FC<GuidanceTextProps> = ({
   const isCountdown = countdown > 0;
 
   return (
-    <div className="pointer-events-none absolute bottom-24 left-0 right-0 text-center">
+    <div className="pointer-events-none text-center">
       <span
-        className={`inline-block rounded-full bg-black/60 px-6 py-2 font-medium text-white backdrop-blur-sm ${
-          isCountdown ? 'text-4xl font-bold px-8 py-4' : 'text-sm'
+        className={`inline-block font-medium text-white ${
+          isCountdown ? 'text-4xl font-bold' : 'text-sm text-white/70'
         }`}
       >
         {getText()}

@@ -8,22 +8,15 @@ interface ProcessOptions {
 }
 
 /**
- * Process a captured image blob into the specified format.
- * Applies aspect-ratio crop centered on image, adaptive zoom based on face size,
- * optional horizontal mirror, and outputs as JPEG blob.
- *
- * Generalized from OneDocs processImageTo3x4HighRes.
+ * Process a captured image: crop to target aspect ratio centered on image,
+ * adaptive zoom based on face size, optional horizontal mirror.
+ * The circle guide is purely visual — crop uses the full frame.
  */
 export async function processImage(
   sourceBlob: Blob,
   options: ProcessOptions
 ): Promise<Blob> {
-  const { format, faceWidthInPreview, mirror = true, jpegQuality = 0.92 } = options;
-
-  // Free format: return as-is (optionally mirror)
-  if (format.id === 'free' && !mirror) {
-    return sourceBlob;
-  }
+  const { format, faceWidthInPreview, mirror = false, jpegQuality = 0.95 } = options;
 
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -33,7 +26,7 @@ export async function processImage(
       if (!resolved) {
         resolved = true;
         cleanup();
-        resolve(sourceBlob); // Graceful fallback
+        resolve(sourceBlob);
       }
     }, 5000);
 
@@ -60,22 +53,10 @@ export async function processImage(
           return;
         }
 
-        const imgWidth = img.naturalWidth || img.width;
-        const imgHeight = img.naturalHeight || img.height;
+        const imgW = img.naturalWidth || img.width;
+        const imgH = img.naturalHeight || img.height;
 
-        // Determine output resolution
-        let outWidth: number;
-        let outHeight: number;
-
-        if (format.id === 'free') {
-          outWidth = imgWidth;
-          outHeight = imgHeight;
-        } else {
-          [outWidth, outHeight] = format.outputResolution;
-        }
-
-        canvas.width = outWidth;
-        canvas.height = outHeight;
+        const [maxOutWidth, maxOutHeight] = format.outputResolution;
 
         // Adaptive crop zoom based on face distance
         let cropZoom = 1.0;
@@ -86,35 +67,36 @@ export async function processImage(
           else if (faceWidthInPreview < 260) cropZoom = 1.2;
         }
 
-        // Calculate source crop region
+        // Crop to target aspect ratio from full frame
+        const [aw, ah] = format.aspectRatio;
+        const targetAR = aw / ah;
+        const imageAR = imgW / imgH;
+
         let sourceWidth: number;
         let sourceHeight: number;
 
-        if (format.id === 'free') {
-          // Free: use full image, just zoom
-          sourceWidth = imgWidth / cropZoom;
-          sourceHeight = imgHeight / cropZoom;
+        if (imageAR > targetAR) {
+          // Image wider than target: use full height, crop width
+          sourceHeight = Math.round(imgH / cropZoom);
+          sourceWidth = Math.round(sourceHeight * targetAR);
         } else {
-          const [aw, ah] = format.aspectRatio;
-          const targetAspectRatio = aw / ah;
-          const imageAspectRatio = imgWidth / imgHeight;
-
-          if (imageAspectRatio > targetAspectRatio) {
-            // Image wider than target: use full height, crop width
-            sourceHeight = imgHeight / cropZoom;
-            sourceWidth = Math.round(sourceHeight * targetAspectRatio);
-          } else {
-            // Image taller than target: use full width, crop height
-            sourceWidth = imgWidth / cropZoom;
-            sourceHeight = Math.round(sourceWidth / targetAspectRatio);
-          }
+          // Image taller than target: use full width, crop height
+          sourceWidth = Math.round(imgW / cropZoom);
+          sourceHeight = Math.round(sourceWidth / targetAR);
         }
 
-        // Center crop
-        const sourceX = Math.round((imgWidth - sourceWidth) / 2);
-        const sourceY = Math.round((imgHeight - sourceHeight) / 2);
+        // Clamp to image bounds
+        sourceWidth = Math.min(sourceWidth, imgW);
+        sourceHeight = Math.min(sourceHeight, imgH);
 
-        // Apply mirror if requested
+        // Use native crop resolution, capped at max output
+        canvas.width = Math.min(sourceWidth, maxOutWidth);
+        canvas.height = Math.min(sourceHeight, maxOutHeight);
+
+        // Center crop
+        const sourceX = Math.round((imgW - sourceWidth) / 2);
+        const sourceY = Math.round((imgH - sourceHeight) / 2);
+
         if (mirror) {
           ctx.save();
           ctx.scale(-1, 1);
@@ -133,7 +115,6 @@ export async function processImage(
 
         canvas.toBlob(
           (blob) => {
-            // Cleanup canvas memory
             if (canvas) {
               canvas.width = 0;
               canvas.height = 0;

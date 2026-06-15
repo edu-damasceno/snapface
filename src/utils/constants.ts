@@ -10,7 +10,7 @@ export const FACE_WIDTH = 250;
 export const FACE_DEVIATION = 85; // Strict mode (document)
 export const RELAXED_FACE_DEVIATION = 120; // Relaxed mode (social/free)
 
-// Distance thresholds
+// Distance thresholds (px of face width in preview, calibrated for 720x560)
 export const TOO_FAR_THRESHOLD = 200;
 export const TOO_CLOSE_THRESHOLD = 320;
 export const DISTANCE_HYSTERESIS = 10;

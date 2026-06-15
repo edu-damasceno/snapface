@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { GalleryProvider } from './contexts/GalleryContext'
 import LandingPage from './pages/LandingPage'
 import CameraPage from './pages/CameraPage'
 
@@ -17,16 +16,14 @@ function App() {
   }
 
   return (
-    <GalleryProvider>
-      <div className="h-full w-full bg-black">
-        {currentPage === 'landing' && (
-          <LandingPage onStart={handleStart} />
-        )}
-        {currentPage === 'camera' && (
-          <CameraPage />
-        )}
-      </div>
-    </GalleryProvider>
+    <div className="h-full w-full bg-black">
+      {currentPage === 'landing' && (
+        <LandingPage onStart={handleStart} />
+      )}
+      {currentPage === 'camera' && (
+        <CameraPage />
+      )}
+    </div>
   )
 }
 

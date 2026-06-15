@@ -47,6 +47,10 @@ export const useAutoCapture = (
   const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const captureTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Keep latest callback in a ref to avoid stale closures in setTimeout/setInterval
+  const onAutoCaptureRef = useRef(onAutoCapture);
+  onAutoCaptureRef.current = onAutoCapture;
+
   const checkStability = useCallback((faceData: FaceData | undefined): boolean => {
     if (!faceData || !previousFaceDataRef.current) return false;
 
@@ -94,10 +98,11 @@ export const useAutoCapture = (
           setState(prev => ({ ...prev, countdown: 0 }));
         }
 
-        captureTimeoutRef.current = setTimeout(async () => {
+        captureTimeoutRef.current = setTimeout(async () => { // minimal delay for React to flush countdown=0
           if (!isMountedRef.current) return;
 
-          const success = await onAutoCapture();
+          // Use ref to always call the latest callback (avoids stale closure)
+          const success = await onAutoCaptureRef.current();
           if (!isMountedRef.current) return;
 
           if (success) {
@@ -116,10 +121,10 @@ export const useAutoCapture = (
             });
             stabilityStartRef.current = 0;
           }
-        }, 200);
+        }, 50);
       }
     }, 1000);
-  }, [onAutoCapture]);
+  }, []);
 
   const cancelAutoCapture = useCallback(() => {
     clearAllTimeouts();
