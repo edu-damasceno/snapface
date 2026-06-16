@@ -34,9 +34,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
           style={{
             background: 'linear-gradient(135deg, #ffffff 0%, #e0e0e0 100%)',
             boxShadow: '0 0 30px rgba(255,255,255,0.12), 0 4px 20px rgba(0,0,0,0.3)',
-            padding: '18px 56px',
           }}
-          className="rounded-full text-base font-semibold text-black transition-all active:scale-95 active:opacity-90"
+          className="rounded-full px-14 py-4 text-base font-semibold text-black transition-all active:scale-95 active:opacity-90"
         >
           Tirar minha foto
         </button>
