@@ -40,13 +40,13 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
         {canInstall ? (
           <button
             onClick={install}
-            className="mt-2 text-white/60 underline underline-offset-4 transition-colors active:text-white/90"
+            className="mt-2 rounded-full border border-white/20 px-6 py-2 text-sm text-white/70 transition-colors active:bg-white/10"
           >
             Instalar app
           </button>
         ) : !isInstalled && (
-          <p className="mt-2 max-w-xs text-center text-xs text-gray-600 leading-relaxed">
-            Para instalar, abra o menu do navegador (⋮) e toque em <strong className="text-gray-500">"Instalar app"</strong>
+          <p className="mt-2 max-w-xs text-center text-xs text-gray-400 leading-relaxed">
+            Para instalar, abra o menu do navegador (⋮) e toque em <strong className="text-white/70">"Instalar app"</strong>
           </p>
         )}
       </div>
