@@ -1,11 +1,8 @@
-import { useInstallPrompt } from '../hooks/useInstallPrompt';
-
 interface LandingPageProps {
   onStart: () => void;
 }
 
 const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
-  const { canInstall, isInstalled, install } = useInstallPrompt();
 
   return (
     <div className="flex h-full flex-col items-center justify-center gap-8 p-8 bg-gradient-to-b from-gray-900 to-black">
@@ -37,18 +34,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
           <span>Privacidade total</span>
         </div>
 
-        {canInstall ? (
-          <button
-            onClick={install}
-            className="mt-2 rounded-full border border-white/20 px-6 py-2 text-sm text-white/70 transition-colors active:bg-white/10"
-          >
-            Instalar app
-          </button>
-        ) : !isInstalled && (
-          <p className="mt-2 max-w-xs text-center text-xs text-gray-400 leading-relaxed">
-            Para instalar, abra o menu do navegador (⋮) e toque em <strong className="text-white/70">"Instalar app"</strong>
-          </p>
-        )}
       </div>
     </div>
   );
