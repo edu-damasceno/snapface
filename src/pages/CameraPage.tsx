@@ -8,6 +8,7 @@ import { processImage } from '../utils/formatProcessor';
 import { DEFAULT_FORMAT } from '../types/CaptureFormat';
 import { CaptureFlash } from '../components/CaptureFlash';
 import { GuidanceText } from '../components/GuidanceText';
+import { ColorWheel } from '../components/ColorWheel';
 
 const CAPTURE_DELAY_MS = 3000;
 const JPEG_QUALITY = 1.0;
@@ -31,6 +32,14 @@ const CameraContent: React.FC = () => {
   const [capturedBlob, setCapturedBlob] = useState<Blob | null>(null);
   const [capturedUrl, setCapturedUrl] = useState<string | null>(null);
   const [isMirrored, setIsMirrored] = useState(false);
+  const [ambientColor, setAmbientColor] = useState(() =>
+    localStorage.getItem('snapface-ambient-color') || '#000000'
+  );
+
+  const handleColorSelect = useCallback((hex: string) => {
+    setAmbientColor(hex);
+    localStorage.setItem('snapface-ambient-color', hex);
+  }, []);
 
   useEffect(() => {
     validate(currentFaceData);
@@ -249,13 +258,21 @@ const CameraContent: React.FC = () => {
 
   // Camera view
   return (
-    <div className="relative flex h-full w-full items-center justify-center bg-black">
+    <div
+      className="relative flex h-full w-full items-center justify-center"
+      style={{ backgroundColor: ambientColor, transition: 'background-color 0.4s ease' }}
+    >
       {/* App title */}
       <div
         className="absolute inset-x-0 top-0 text-center"
         style={{ paddingTop: 'max(env(safe-area-inset-top, 20px), 48px)' }}
       >
-        <h1 className="text-lg font-semibold tracking-wide text-white/90">SnapFace</h1>
+        <h1
+          className="text-lg font-semibold tracking-wide text-white/90"
+          style={{ textShadow: '0 1px 6px rgba(0,0,0,0.6)' }}
+        >
+          SnapFace
+        </h1>
       </div>
 
       {/* Guidance text — absolute above circle, won't affect circle position */}
@@ -324,6 +341,16 @@ const CameraContent: React.FC = () => {
       </div>
 
       <CaptureFlash trigger={flashTrigger} />
+
+      {/* Color wheel — bottom of capture screen */}
+      {isCapturing && !isLoading && (
+        <div
+          className="absolute inset-x-0 bottom-0"
+          style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 16px), 24px)' }}
+        >
+          <ColorWheel selectedColor={ambientColor} onSelect={handleColorSelect} />
+        </div>
+      )}
 
       {/* Loading overlay — full screen, outside circular container */}
       {isLoading && (

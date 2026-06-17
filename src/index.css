@@ -26,6 +26,9 @@ body {
   color: #fff;
 }
 
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; }
+
 @keyframes flash {
   0% {
     opacity: 0.8;

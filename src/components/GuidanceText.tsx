@@ -34,6 +34,7 @@ export const GuidanceText: React.FC<GuidanceTextProps> = ({
         className={`inline-block font-medium text-white ${
           isCountdown ? 'text-4xl font-bold' : 'text-sm text-white/70'
         }`}
+        style={{ textShadow: '0 1px 6px rgba(0,0,0,0.6)' }}
       >
         {getText()}
       </span>
