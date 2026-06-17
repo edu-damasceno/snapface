@@ -105,6 +105,7 @@ export const ReactMediaPipe = forwardRef<ReactMediaPipeRef, ReactMediaPipeProps>
     const [loading, setLoading] = useState(true);
     const [, setCameraError] = useState<string | null>(null);
     const faceDetectionReadyRef = useRef(false);
+    const isInitializingDetectorRef = useRef(false);
 
     const { acquireWakeLock, releaseWakeLock } = useWakeLock();
 
@@ -270,7 +271,6 @@ export const ReactMediaPipe = forwardRef<ReactMediaPipeRef, ReactMediaPipeProps>
           setCameraState('ready');
           setCameraError(null);
           setLoading(false);
-          onLoadingChange?.(false);
         }
       } catch (error: any) {
         setCameraState('error');
@@ -282,7 +282,8 @@ export const ReactMediaPipe = forwardRef<ReactMediaPipeRef, ReactMediaPipeProps>
     }, [setCameraState, onLoadingChange, onCameraError, acquireWakeLock, getAdaptiveResolution, setupVideoWithEvents]);
 
     const initializeDetector = useCallback(async () => {
-      if (detectorRef.current) return;
+      if (detectorRef.current || isInitializingDetectorRef.current) return;
+      isInitializingDetectorRef.current = true;
 
       try {
         const detector = new MediaPipeFaceDetection();
@@ -293,9 +294,13 @@ export const ReactMediaPipe = forwardRef<ReactMediaPipeRef, ReactMediaPipeProps>
           detector.setVideoElement(videoRef.current);
         }
 
-        detectFaceLoop();
+        if (isMountedRef.current && cameraStateRef.current === 'ready') {
+          detectFaceLoop();
+        }
       } catch (error) {
         console.error('[MediaPipe] Detector initialization error:', error);
+      } finally {
+        isInitializingDetectorRef.current = false;
       }
     }, [detectFaceLoop]);
 
