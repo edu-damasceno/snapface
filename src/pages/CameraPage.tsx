@@ -161,37 +161,41 @@ const CameraContent: React.FC = () => {
     }
   }, [getFinalBlob]);
 
-  // Confirmation screen — photo full-screen with floating buttons
+  // Confirmation screen — circular photo matching capture layout
   if (capturedUrl) {
     return (
-      <div className="relative h-full w-full bg-black">
-        {/* Full-screen photo */}
-        <img
-          src={capturedUrl}
-          alt="Foto capturada"
-          className="h-full w-full object-contain"
-          style={{ transform: isMirrored ? 'scaleX(-1)' : 'none' }}
-        />
-
-        {/* Top gradient + header */}
+      <div className="relative flex h-full w-full items-center justify-center bg-black">
+        {/* Instruction text — above circle */}
         <div
-          className="absolute inset-x-0 top-0 px-8 pb-16"
-          style={{
-            paddingTop: 'max(env(safe-area-inset-top, 20px), 48px)',
-            background: 'linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 55%, transparent 100%)',
-          }}
+          className="absolute left-0 right-0"
+          style={{ bottom: 'calc(50% + clamp(130px, min(45vw, 27.5dvh), 195px) + 24px)' }}
         >
-          <p className="text-center text-sm font-medium leading-relaxed text-white">
+          <p className="pointer-events-none text-center text-sm font-medium text-white/70">
             Confira se seu rosto está focado<br />e fácil de identificar.
           </p>
         </div>
 
-        {/* Bottom gradient + circular buttons */}
+        {/* Circular photo — same size as capture circle */}
         <div
-          className="absolute inset-x-0 bottom-0 pt-24"
+          className="overflow-hidden rounded-full"
           style={{
-            paddingBottom: 'max(env(safe-area-inset-bottom, 16px), 36px)',
-            background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.5) 40%, transparent 100%)',
+            width: 'clamp(260px, min(90vw, 55dvh), 390px)',
+            height: 'clamp(260px, min(90vw, 55dvh), 390px)',
+          }}
+        >
+          <img
+            src={capturedUrl}
+            alt="Foto capturada"
+            className="h-full w-full object-cover"
+            style={{ transform: isMirrored ? 'scaleX(-1)' : 'none' }}
+          />
+        </div>
+
+        {/* Action buttons — below circle */}
+        <div
+          className="absolute inset-x-0"
+          style={{
+            top: 'calc(50% + clamp(130px, min(45vw, 27.5dvh), 195px) + 24px)',
           }}
         >
           <div className="flex items-start justify-center gap-6">
