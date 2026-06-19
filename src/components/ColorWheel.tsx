@@ -25,7 +25,7 @@ export { AMBIENT_COLORS };
 export const ColorWheel: React.FC<ColorWheelProps> = ({ selectedColor, onSelect }) => {
   return (
     <div
-      className="no-scrollbar flex gap-3 overflow-x-auto px-8 py-3"
+      className="no-scrollbar flex justify-center gap-3 overflow-x-auto px-8 py-3"
       style={{ scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch' }}
     >
       {AMBIENT_COLORS.map(({ hex, label }) => {

@@ -168,41 +168,41 @@ const CameraContent: React.FC = () => {
     }
   }, [getFinalBlob]);
 
-  // Confirmation screen — circular photo matching capture layout
+  // Confirmation screen — 3x4 photo matching capture layout
   if (capturedUrl) {
     return (
       <div className="relative flex h-full w-full items-center justify-center bg-black">
-        {/* Instruction text — above circle */}
+        {/* Instruction text — above frame */}
         <div
           className="absolute left-0 right-0"
-          style={{ bottom: 'calc(50% + clamp(130px, min(45vw, 27.5dvh), 195px) + 24px)' }}
+          style={{ bottom: 'calc(50% + clamp(173px, min(33.75vw, 36.7dvh), 260px) + 24px)' }}
         >
           <p className="pointer-events-none text-center text-sm font-medium text-white/70">
             Confira se seu rosto está focado<br />e fácil de identificar.
           </p>
         </div>
 
-        {/* Circular photo — same size as capture circle */}
+        {/* 3x4 photo — same size as capture frame */}
         <div
-          className="overflow-hidden rounded-full"
+          className="overflow-hidden rounded-2xl"
           style={{
-            width: 'clamp(260px, min(90vw, 55dvh), 390px)',
+            width: 'clamp(195px, min(67.5vw, 41.25dvh), 293px)',
             height: 'clamp(260px, min(90vw, 55dvh), 390px)',
           }}
         >
           <img
-            src={rawPreviewUrl || capturedUrl}
+            src={capturedUrl}
             alt="Foto capturada"
             className="h-full w-full object-cover"
             style={{ transform: isMirrored ? 'scaleX(-1)' : 'none' }}
           />
         </div>
 
-        {/* Action buttons — below circle */}
+        {/* Action buttons — below frame */}
         <div
           className="absolute inset-x-0"
           style={{
-            top: 'calc(50% + clamp(130px, min(45vw, 27.5dvh), 195px) + 24px)',
+            top: 'calc(50% + clamp(173px, min(33.75vw, 36.7dvh), 260px) + 24px)',
           }}
         >
           <div className="flex items-start justify-center gap-6">
@@ -286,9 +286,9 @@ const CameraContent: React.FC = () => {
         </h1>
       </div>
 
-      {/* Guidance text — absolute above circle, won't affect circle position */}
+      {/* Guidance text — absolute above preview frame */}
       {!isLoading && !isProcessing && (
-        <div className="absolute left-0 right-0" style={{ bottom: 'calc(50% + clamp(130px, min(45vw, 27.5dvh), 195px) + 24px)' }}>
+        <div className="absolute left-0 right-0" style={{ bottom: 'calc(50% + clamp(173px, min(33.75vw, 36.7dvh), 260px) + 24px)' }}>
           <GuidanceText
             isFaceDetected={isFaceDetected}
             validationDetails={validationDetails}
@@ -298,11 +298,11 @@ const CameraContent: React.FC = () => {
         </div>
       )}
 
-      {/* Circular video container — hidden during loading so spinner shows centered */}
+      {/* 3x4 video container — hidden during loading so spinner shows centered */}
       <div
-        className="relative overflow-hidden rounded-full"
+        className="relative overflow-hidden rounded-2xl"
         style={{
-          width: 'clamp(260px, min(90vw, 55dvh), 390px)',
+          width: 'clamp(195px, min(67.5vw, 41.25dvh), 293px)',
           height: 'clamp(260px, min(90vw, 55dvh), 390px)',
           visibility: isLoading ? 'hidden' : 'visible',
         }}
@@ -336,7 +336,7 @@ const CameraContent: React.FC = () => {
         {/* Dashed border overlay */}
         {!isLoading && (
           <div
-            className="pointer-events-none absolute inset-0 rounded-full"
+            className="pointer-events-none absolute inset-0 rounded-2xl"
             style={{
               border: `3px dashed ${
                 !isFaceDetected
