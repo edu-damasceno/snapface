@@ -178,7 +178,7 @@ const CameraContent: React.FC = () => {
           style={{ bottom: 'calc(50% + clamp(173px, min(33.75vw, 36.7dvh), 260px) + 24px)' }}
         >
           <p className="pointer-events-none text-center text-sm font-medium text-white/70">
-            Confira se seu rosto está focado<br />e fácil de identificar.
+            Ficou boa? Confira antes de salvar.
           </p>
         </div>
 
