@@ -14,29 +14,31 @@ No test framework is configured.
 
 ## Architecture
 
-SnapFace is a hands-free AI selfie capture PWA. The user points the camera at their face, the app validates positioning in real-time, and auto-captures after 3 seconds of stability.
+SnapFace is a hands-free AI selfie capture PWA. The user points the camera at their face, the app validates positioning in real-time, and auto-captures after 3 seconds of stability — or instantly when smile mode is enabled.
 
 ### Pipeline
 
 ```
-Camera (getUserMedia) → MediaPipe FaceLandmarker (468 landmarks, CPU mode)
-→ Validation (size, position, orientation) → Stability detection → Auto-capture countdown
+Camera (getUserMedia) → MediaPipe FaceLandmarker (468 landmarks + blendshapes, CPU mode)
+→ Validation (size, position, orientation, optional smile) → Stability detection → Auto-capture (countdown or instant)
 → Format processing (crop, zoom, mirror) → Download/share
 ```
 
 ### Key modules
 
-- **`src/lib/MediaPipeFaceDetection.ts`** — Low-level MediaPipe wrapper. Runs face landmark detection with hysteresis-based direction tracking (35° center→side, 25° side→center to prevent flickering).
+- **`src/lib/MediaPipeFaceDetection.ts`** — Low-level MediaPipe wrapper. Runs face landmark detection with hysteresis-based direction tracking (35° center→side, 25° side→center). Exports `smileIntensity` from `mouthSmileLeft`/`mouthSmileRight` blendshapes.
 - **`src/lib/ReactMediaPipe.tsx`** — React component managing camera lifecycle and detection loop (~20 FPS). Adaptive resolution: 1080p if ≥4GB RAM, else 720p.
-- **`src/hooks/useFaceValidation.ts`** — Real-time validation with distance hysteresis. Thresholds in `src/utils/constants.ts` are calibrated for a 720px reference height.
-- **`src/hooks/useAutoCapture.ts`** — Stability detection + 3s countdown before capture.
+- **`src/hooks/useFaceValidation.ts`** — Real-time validation with distance hysteresis. When `smileRequired` is true, overall validity includes smile threshold (>0.4).
+- **`src/hooks/useAutoCapture.ts`** — Stability detection + 3s countdown; `instantCapture` skips both for smile mode. Uses `instantCaptureArmedRef` to require a fresh smile after retake.
 - **`src/utils/formatProcessor.ts`** — Crops to target aspect ratio with adaptive zoom based on detected face width, optional horizontal flip.
+- **`src/utils/colorContrast.ts`** — WCAG luminance-based text theme for capture UI over ambient background colors.
+- **`src/utils/cookies.ts`** — Persists smile mode toggle (`snapface-smile-mode`).
 - **`src/types/CaptureFormat.ts`** — Format definitions (currently 3×4 document format, 1440×1920 output).
 - **`src/contexts/FaceDetectionContext.tsx`** — Central state: face data, validation details, direction, capture readiness.
 
 ### Page flow
 
-`App.tsx` switches between `LandingPage` and `CameraPage`. CameraPage wraps everything in `FaceDetectionProvider` and orchestrates the capture UI (circular guide overlay, guidance text, photo preview).
+`App.tsx` switches between `LandingPage` and `CameraPage`. CameraPage wraps everything in `FaceDetectionProvider` and orchestrates the capture UI (guidance text, smile toggle, color wheel, photo preview/confirmation).
 
 ## Important Technical Decisions
 

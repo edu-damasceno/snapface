@@ -73,6 +73,23 @@ Motor de captura baseado no MediaPipe FaceLandmarker com 468 landmarks faciais.
 - Estabilidade: 25px max movimento, 15px max mudança de largura, 1000ms duração
 - Confiança de detecção: 0.3 (otimizado para CPU delegate — compatibilidade universal)
 
+#### 5.1.1 Captura ao sorriso (implementado)
+
+Toggle opcional na tela da câmera (`Captura ao sorrir`). Quando ativo:
+
+1. MediaPipe blendshapes (`mouthSmileLeft` + `mouthSmileRight`) calculam `smileIntensity`
+2. Após posicionamento válido, guidance exibe **"Sorria!"**
+3. Sorriso detectado (intensidade > 0.4) → captura **instantânea** (sem countdown)
+4. Após retake, exige novo sorriso (não dispara em loop se o usuário continuar sorrindo)
+5. Preferência persistida em cookie (`snapface-smile-mode`, 1 ano)
+
+Modo padrão (toggle off) permanece inalterado: estabilidade + countdown 3s.
+
+**Melhorias de UX relacionadas (implementadas):**
+- Seletor de cor ambiente (14 swatches) com contraste adaptativo de textos
+- Layout flex centralizado na captura e na tela de confirmação
+- Roda de cores com scroll horizontal completo no mobile
+
 ### 5.2 Modelos de Captura (Formatos)
 
 Seletor de formato acessível na tela da câmera (ícone ou drawer inferior):

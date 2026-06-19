@@ -2,6 +2,44 @@ interface LandingPageProps {
   onStart: () => void;
 }
 
+const FEATURES = [
+  {
+    label: 'Sem apertar nada',
+    svg: (
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+      </svg>
+    ),
+  },
+  {
+    label: 'Captura ao sorrir',
+    svg: (
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <circle cx="12" cy="12" r="10" strokeWidth={1.5} />
+        <circle cx="9" cy="10" r="1" fill="currentColor" stroke="none" />
+        <circle cx="15" cy="10" r="1" fill="currentColor" stroke="none" />
+        <path d="M8 14s1.5 2 4 2 4-2 4-2" strokeWidth={1.5} strokeLinecap="round" />
+      </svg>
+    ),
+  },
+  {
+    label: 'Formato documento',
+    svg: (
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0" />
+      </svg>
+    ),
+  },
+  {
+    label: 'Privacidade total',
+    svg: (
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+      </svg>
+    ),
+  },
+] as const;
+
 const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
   return (
     <div className="relative flex h-full w-full flex-col items-center bg-black overflow-hidden">
@@ -25,9 +63,15 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
 
       {/* Center — description + CTA */}
       <div className="relative z-10 flex flex-1 flex-col items-center justify-center gap-8 px-8">
-        <p className="max-w-[280px] text-center text-base leading-relaxed text-white/60">
-          Posicione o rosto e relaxe — a IA detecta e captura <strong className="text-white">automaticamente</strong>.
-        </p>
+        <div className="flex max-w-[300px] flex-col gap-3 text-center">
+          <p className="text-base leading-relaxed text-white/60">
+            Posicione o rosto e relaxe — a IA detecta e captura{' '}
+            <strong className="text-white">automaticamente</strong>.
+          </p>
+          <p className="text-sm leading-relaxed text-white/45">
+            Ative <strong className="text-white/70">Captura ao sorrir</strong> e tire a foto na hora em que você sorrir.
+          </p>
+        </div>
 
         <button
           onClick={onStart}
@@ -50,38 +94,13 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
         className="relative z-10 w-full"
         style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 16px), 32px)' }}
       >
-        <div className="flex justify-center gap-8 px-6">
-          {[
-            {
-              label: 'Sem apertar nada',
-              svg: (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                </svg>
-              ),
-            },
-            {
-              label: 'Formato documento',
-              svg: (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0" />
-                </svg>
-              ),
-            },
-            {
-              label: 'Privacidade total',
-              svg: (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-              ),
-            },
-          ].map((item) => (
+        <div className="grid grid-cols-2 gap-x-4 gap-y-5 px-8 sm:mx-auto sm:max-w-lg sm:grid-cols-4 sm:gap-x-6">
+          {FEATURES.map((item) => (
             <div key={item.label} className="flex flex-col items-center gap-2">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/[0.07] text-white/50">
                 {item.svg}
               </div>
-              <span className="max-w-[80px] text-center text-[10px] leading-tight text-white/35">{item.label}</span>
+              <span className="max-w-[88px] text-center text-[10px] leading-tight text-white/35">{item.label}</span>
             </div>
           ))}
         </div>
