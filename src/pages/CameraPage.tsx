@@ -24,7 +24,8 @@ const CameraContent: React.FC = () => {
     isCaptureValid,
     onFaceFrameProcessed,
   } = useFaceDetection();
-  const { validate } = useFaceValidation();
+  const [smileMode, setSmileMode] = useState(false);
+  const { validate } = useFaceValidation(undefined, smileMode);
 
   const [flashTrigger, setFlashTrigger] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -277,9 +278,9 @@ const CameraContent: React.FC = () => {
       className="relative flex h-full w-full items-center justify-center"
       style={{ backgroundColor: ambientColor, transition: 'background-color 0.4s ease' }}
     >
-      {/* App title */}
+      {/* App title + smile toggle */}
       <div
-        className="absolute inset-x-0 top-0 text-center"
+        className="absolute inset-x-0 top-0 flex items-center justify-center gap-3"
         style={{ paddingTop: 'max(env(safe-area-inset-top, 20px), 48px)' }}
       >
         <h1
@@ -288,6 +289,24 @@ const CameraContent: React.FC = () => {
         >
           SnapFace
         </h1>
+        <button
+          onClick={() => setSmileMode(prev => !prev)}
+          className="flex items-center justify-center rounded-full transition-opacity active:opacity-70"
+          style={{
+            width: 32,
+            height: 32,
+            backgroundColor: smileMode ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.1)',
+            textShadow: '0 1px 6px rgba(0,0,0,0.6)',
+          }}
+          aria-label={smileMode ? 'Desativar captura com sorriso' : 'Ativar captura com sorriso'}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="h-5 w-5" style={{ color: smileMode ? 'rgba(250,204,21,1)' : 'rgba(255,255,255,0.5)' }}>
+            <circle cx="12" cy="12" r="10" strokeWidth="1.5" />
+            <circle cx="9" cy="10" r="1" fill="currentColor" stroke="none" />
+            <circle cx="15" cy="10" r="1" fill="currentColor" stroke="none" />
+            <path d="M8 14s1.5 2 4 2 4-2 4-2" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+        </button>
       </div>
 
       {/* Guidance text — absolute above preview frame */}
@@ -297,6 +316,7 @@ const CameraContent: React.FC = () => {
             isFaceDetected={isFaceDetected}
             validationDetails={validationDetails}
             isStable={isStable}
+            smileRequired={smileMode}
             countdown={countdown}
           />
         </div>

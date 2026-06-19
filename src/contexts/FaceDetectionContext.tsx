@@ -6,6 +6,7 @@ export interface FaceData {
   width: number;
   height: number;
   position: number;
+  smileIntensity?: number;
   direction: {
     isLookLeft: boolean;
     isLookRight: boolean;
@@ -33,6 +34,7 @@ export interface ValidationDetails {
   faceOrientation: boolean;
   faceInFrame: boolean;
   overall: boolean;
+  smileDetected?: boolean;
   distanceType?: 'too_far' | 'too_close' | 'correct';
   direction?: {
     isLookLeft: boolean;
@@ -176,6 +178,7 @@ export const FaceDetectionProvider: React.FC<FaceDetectionProviderProps> = ({ ch
       width: faceWidth,
       height: faceHeight,
       position: facePosition,
+      smileIntensity: face.getSmileIntensity(),
       direction: {
         isLookLeft: face.direction.isLookLeft(),
         isLookRight: face.direction.isLookRight(),

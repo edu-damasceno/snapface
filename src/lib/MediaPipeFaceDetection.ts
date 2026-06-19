@@ -17,6 +17,7 @@ export interface MediaPipeFaceData {
     isLookUp: boolean;
     isLookDown: boolean;
   };
+  smileIntensity?: number;
   landmarks?: number[][];
   rotation?: {
     x: number; // pitch (up/down)
@@ -86,7 +87,7 @@ export class MediaPipeFaceDetection {
         minFaceDetectionConfidence: 0.3,
         minFacePresenceConfidence: 0.3,
         minTrackingConfidence: 0.3,
-        outputFaceBlendshapes: false,
+        outputFaceBlendshapes: true,
         outputFacialTransformationMatrixes: false
       });
 
@@ -116,7 +117,17 @@ export class MediaPipeFaceDetection {
       }
 
       const landmarks = result.faceLandmarks[0];
-      const faceData = this.calculateFaceData(landmarks, this.videoElement.videoWidth, this.videoElement.videoHeight);
+
+      // Extract smile intensity from blendshapes
+      let smileIntensity: number | undefined;
+      const blendshapes = result.faceBlendshapes?.[0]?.categories;
+      if (blendshapes) {
+        const left = blendshapes.find((b: any) => b.categoryName === 'mouthSmileLeft')?.score ?? 0;
+        const right = blendshapes.find((b: any) => b.categoryName === 'mouthSmileRight')?.score ?? 0;
+        smileIntensity = (left + right) / 2;
+      }
+
+      const faceData = this.calculateFaceData(landmarks, this.videoElement.videoWidth, this.videoElement.videoHeight, smileIntensity);
 
       return {
         isFaceDetected: () => true,
@@ -128,7 +139,7 @@ export class MediaPipeFaceDetection {
     }
   }
 
-  private calculateFaceData(landmarks: any[], videoWidth: number, videoHeight: number): MediaPipeFaceData {
+  private calculateFaceData(landmarks: any[], videoWidth: number, videoHeight: number, smileIntensity?: number): MediaPipeFaceData {
     const landmarksPixels = landmarks.map(lm => [
       lm.x * videoWidth,
       lm.y * videoHeight,
@@ -176,6 +187,7 @@ export class MediaPipeFaceDetection {
       height: height * normScale,
       position: position * normScale,
       direction,
+      smileIntensity,
       landmarks: landmarksPixels,
       rotation,
       boundingBox: { minX, maxX, minY, maxY, isPartiallyOutOfFrame, outOfFrameEdges }

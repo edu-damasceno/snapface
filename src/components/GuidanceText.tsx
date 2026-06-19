@@ -5,6 +5,7 @@ interface GuidanceTextProps {
   validationDetails: ValidationDetails | undefined;
   isStable: boolean;
   countdown: number;
+  smileRequired?: boolean;
 }
 
 export const GuidanceText: React.FC<GuidanceTextProps> = ({
@@ -12,6 +13,7 @@ export const GuidanceText: React.FC<GuidanceTextProps> = ({
   validationDetails,
   isStable,
   countdown,
+  smileRequired = false,
 }) => {
   const getText = () => {
     if (countdown > 0) return String(countdown);
@@ -21,6 +23,7 @@ export const GuidanceText: React.FC<GuidanceTextProps> = ({
     if (!validationDetails?.faceOrientation) return 'Olhe para frente';
     if (!validationDetails?.facePosition) return 'Centralize o rosto';
     if (!validationDetails?.faceInFrame) return 'Rosto fora do quadro';
+    if (smileRequired && validationDetails?.faceSize && validationDetails?.facePosition && validationDetails?.faceOrientation && validationDetails?.faceInFrame && !validationDetails?.smileDetected) return 'Sorria!';
     if (isStable) return 'Mantenha a posição...';
     if (validationDetails?.overall) return 'Estabilizando...';
     return 'Posicione seu rosto no centro';

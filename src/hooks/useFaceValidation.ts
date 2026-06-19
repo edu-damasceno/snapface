@@ -12,7 +12,7 @@ import {
  * Hook that validates face data and updates the FaceDetectionContext.
  * Extracted from OneDocs CapturePreview with distance hysteresis.
  */
-export const useFaceValidation = (faceDeviation: number = RELAXED_FACE_DEVIATION) => {
+export const useFaceValidation = (faceDeviation: number = RELAXED_FACE_DEVIATION, smileRequired: boolean = false) => {
   const {
     currentFaceData,
     setIsVisuallyValid,
@@ -66,7 +66,9 @@ export const useFaceValidation = (faceDeviation: number = RELAXED_FACE_DEVIATION
     const facePosition = facePositionDeviation <= faceDeviation;
     const faceOrientation = !isLookingSideways && !isLookingVertical;
 
-    const overall = faceSize && facePosition && faceOrientation && isFaceInFrame;
+    const positionValid = faceSize && facePosition && faceOrientation && isFaceInFrame;
+    const smileDetected = (faceData.smileIntensity ?? 0) > 0.4;
+    const overall = smileRequired ? positionValid && smileDetected : positionValid;
 
     const details: ValidationDetails = {
       faceSize,
@@ -74,6 +76,7 @@ export const useFaceValidation = (faceDeviation: number = RELAXED_FACE_DEVIATION
       faceOrientation,
       faceInFrame: isFaceInFrame,
       overall,
+      smileDetected,
       distanceType,
       direction: faceData.direction,
     };

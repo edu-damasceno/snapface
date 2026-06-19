@@ -35,6 +35,7 @@ export interface MediaPipeFaceCompatible {
     isLookDown(): boolean;
     getRotation(): { x: number; y: number; z: number };
   };
+  getSmileIntensity(): number;
   getLandmarks(): any;
   getBoundingBox(): MediaPipeFaceData['boundingBox'];
 }
@@ -163,6 +164,7 @@ export const ReactMediaPipe = forwardRef<ReactMediaPipeRef, ReactMediaPipeProps>
           isLookDown: () => faceData.direction.isLookDown,
           getRotation: () => faceData.rotation || { x: 0, y: 0, z: 0 }
         },
+        getSmileIntensity: () => faceData.smileIntensity ?? 0,
         getLandmarks: () => ({
           getPositions: () => faceData.landmarks || []
         }),
