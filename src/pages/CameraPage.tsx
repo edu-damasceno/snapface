@@ -165,7 +165,7 @@ const CameraContent: React.FC = () => {
       await navigator.share({
         files: [file],
         title: 'SnapFace',
-        text: 'Foto tirada com SnapFace — snapface.nerdlatino.com',
+        text: 'Foto tirada com SnapFace — https://snapface.nerdlatino.com',
       });
     } catch {
       // User cancelled or share failed
