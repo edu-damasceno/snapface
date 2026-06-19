@@ -9,6 +9,7 @@ import { DEFAULT_FORMAT } from '../types/CaptureFormat';
 import { CaptureFlash } from '../components/CaptureFlash';
 import { GuidanceText } from '../components/GuidanceText';
 import { ColorWheel } from '../components/ColorWheel';
+import { getSmileModeCookie, setSmileModeCookie } from '../utils/cookies';
 
 const CAPTURE_DELAY_MS = 3000;
 const JPEG_QUALITY = 1.0;
@@ -24,8 +25,16 @@ const CameraContent: React.FC = () => {
     isCaptureValid,
     onFaceFrameProcessed,
   } = useFaceDetection();
-  const [smileMode, setSmileMode] = useState(false);
+  const [smileMode, setSmileMode] = useState(getSmileModeCookie);
   const { validate } = useFaceValidation(undefined, smileMode);
+
+  const handleSmileModeToggle = useCallback(() => {
+    setSmileMode(prev => {
+      const next = !prev;
+      setSmileModeCookie(next);
+      return next;
+    });
+  }, []);
 
   const [flashTrigger, setFlashTrigger] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -284,7 +293,7 @@ const CameraContent: React.FC = () => {
           SnapFace
         </h1>
         <button
-          onClick={() => setSmileMode(prev => !prev)}
+          onClick={handleSmileModeToggle}
           aria-pressed={smileMode}
           aria-label={smileMode ? 'Desativar captura ao sorrir' : 'Ativar captura ao sorrir'}
           className="flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium backdrop-blur-md transition-colors active:opacity-70"
