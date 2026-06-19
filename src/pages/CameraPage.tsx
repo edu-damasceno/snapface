@@ -162,7 +162,11 @@ const CameraContent: React.FC = () => {
     try {
       const blob = await getFinalBlob();
       const file = new File([blob], `snapface_${Date.now()}.jpg`, { type: 'image/jpeg' });
-      await navigator.share({ files: [file] });
+      await navigator.share({
+        files: [file],
+        title: 'SnapFace',
+        text: 'Foto tirada com SnapFace — snapface.nerdlatino.com',
+      });
     } catch {
       // User cancelled or share failed
     }
