@@ -6,6 +6,9 @@ interface GuidanceTextProps {
   isStable: boolean;
   countdown: number;
   smileRequired?: boolean;
+  primaryColor?: string;
+  secondaryColor?: string;
+  textShadow?: string;
 }
 
 export const GuidanceText: React.FC<GuidanceTextProps> = ({
@@ -14,6 +17,9 @@ export const GuidanceText: React.FC<GuidanceTextProps> = ({
   isStable,
   countdown,
   smileRequired = false,
+  primaryColor = 'rgba(255,255,255,0.9)',
+  secondaryColor = 'rgba(255,255,255,0.7)',
+  textShadow = '0 1px 6px rgba(0,0,0,0.6)',
 }) => {
   const getText = () => {
     if (countdown > 0) return String(countdown);
@@ -34,10 +40,11 @@ export const GuidanceText: React.FC<GuidanceTextProps> = ({
   return (
     <div className="pointer-events-none text-center">
       <span
-        className={`inline-block font-medium text-white ${
-          isCountdown ? 'text-4xl font-bold' : 'text-sm text-white/70'
-        }`}
-        style={{ textShadow: '0 1px 6px rgba(0,0,0,0.6)' }}
+        className={`inline-block font-medium ${isCountdown ? 'text-4xl font-bold' : 'text-sm'}`}
+        style={{
+          color: isCountdown ? primaryColor : secondaryColor,
+          textShadow,
+        }}
       >
         {getText()}
       </span>

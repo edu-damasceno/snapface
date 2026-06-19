@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FaceDetectionProvider, useFaceDetection } from '../contexts/FaceDetectionContext';
 import { ReactMediaPipe } from '../lib/ReactMediaPipe';
 import type { ReactMediaPipeRef } from '../lib/ReactMediaPipe';
@@ -10,6 +10,7 @@ import { CaptureFlash } from '../components/CaptureFlash';
 import { GuidanceText } from '../components/GuidanceText';
 import { ColorWheel } from '../components/ColorWheel';
 import { getSmileModeCookie, setSmileModeCookie } from '../utils/cookies';
+import { getAmbientTextTheme } from '../utils/colorContrast';
 
 const CAPTURE_DELAY_MS = 3000;
 const JPEG_QUALITY = 1.0;
@@ -51,6 +52,8 @@ const CameraContent: React.FC = () => {
     setAmbientColor(hex);
     localStorage.setItem('snapface-ambient-color', hex);
   }, []);
+
+  const textTheme = useMemo(() => getAmbientTextTheme(ambientColor), [ambientColor]);
 
   useEffect(() => {
     validate(currentFaceData);
@@ -287,8 +290,8 @@ const CameraContent: React.FC = () => {
         style={{ paddingTop: 'max(env(safe-area-inset-top, 20px), 48px)' }}
       >
         <h1
-          className="text-lg font-semibold tracking-wide text-white/90"
-          style={{ textShadow: '0 1px 6px rgba(0,0,0,0.6)' }}
+          className="text-lg font-semibold tracking-wide"
+          style={{ color: textTheme.primary, textShadow: textTheme.shadow }}
         >
           SnapFace
         </h1>
@@ -298,10 +301,10 @@ const CameraContent: React.FC = () => {
           aria-label={smileMode ? 'Desativar captura ao sorrir' : 'Ativar captura ao sorrir'}
           className="flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium backdrop-blur-md transition-colors active:opacity-70"
           style={{
-            backgroundColor: smileMode ? 'rgba(250,204,21,0.22)' : 'rgba(0,0,0,0.35)',
-            border: smileMode ? '1.5px solid rgba(250,204,21,0.65)' : '1.5px solid rgba(255,255,255,0.35)',
-            boxShadow: '0 1px 8px rgba(0,0,0,0.35)',
-            color: smileMode ? 'rgba(250,204,21,1)' : 'rgba(255,255,255,0.9)',
+            backgroundColor: smileMode ? 'rgba(250,204,21,0.22)' : textTheme.toggleBg,
+            border: smileMode ? '1.5px solid rgba(250,204,21,0.65)' : textTheme.toggleBorder,
+            boxShadow: '0 1px 8px rgba(0,0,0,0.2)',
+            color: smileMode ? 'rgba(250,204,21,1)' : textTheme.toggleText,
           }}
         >
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="h-4 w-4 shrink-0">
@@ -314,8 +317,8 @@ const CameraContent: React.FC = () => {
           <span
             className="rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
             style={{
-              backgroundColor: smileMode ? 'rgba(250,204,21,0.25)' : 'rgba(255,255,255,0.15)',
-              color: smileMode ? 'rgba(250,204,21,1)' : 'rgba(255,255,255,0.65)',
+              backgroundColor: smileMode ? 'rgba(250,204,21,0.25)' : textTheme.toggleBadgeBg,
+              color: smileMode ? 'rgba(250,204,21,1)' : textTheme.toggleBadgeText,
             }}
           >
             {smileMode ? 'Ativo' : 'Off'}
@@ -333,6 +336,9 @@ const CameraContent: React.FC = () => {
               isStable={isStable}
               smileRequired={smileMode}
               countdown={countdown}
+              primaryColor={textTheme.primary}
+              secondaryColor={textTheme.secondary}
+              textShadow={textTheme.shadow}
             />
           </div>
         )}
@@ -406,8 +412,8 @@ const CameraContent: React.FC = () => {
       {/* Loading overlay — full screen, outside circular container */}
       {isLoading && (
         <div className="absolute inset-0 z-10 flex flex-col items-center justify-center">
-          <div className="mb-4 h-12 w-12 animate-spin rounded-full border-4 border-white/20 border-t-white" />
-          <p className="text-sm text-gray-400">Carregando câmera...</p>
+          <div className={`mb-4 h-12 w-12 animate-spin rounded-full border-4 ${textTheme.spinnerTrack} ${textTheme.spinnerHead}`} />
+          <p className="text-sm" style={{ color: textTheme.secondary }}>Carregando câmera...</p>
         </div>
       )}
 
