@@ -48,6 +48,8 @@ export const useAutoCapture = (
   const stabilityTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const captureTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const instantCaptureArmedRef = useRef(true);
+  const wasEnabledRef = useRef(fullConfig.enabled);
 
   // Keep latest callback in a ref to avoid stale closures in setTimeout/setInterval
   const onAutoCaptureRef = useRef(onAutoCapture);
@@ -142,9 +144,16 @@ export const useAutoCapture = (
   // Main effect to monitor conditions
   useEffect(() => {
     if (!fullConfig.enabled) {
+      wasEnabledRef.current = false;
       cancelAutoCapture();
       return;
     }
+
+    // After retake, user may still be smiling — require a fresh smile trigger
+    if (fullConfig.instantCapture && !wasEnabledRef.current) {
+      instantCaptureArmedRef.current = false;
+    }
+    wasEnabledRef.current = true;
 
     const isBasicallyValid = isValidForCapture &&
                            currentFaceData &&
@@ -154,12 +163,18 @@ export const useAutoCapture = (
       if (state.isActive) {
         cancelAutoCapture();
       }
+      // Arm instant capture when conditions become invalid (face gone or smile stopped)
+      if (fullConfig.instantCapture) {
+        instantCaptureArmedRef.current = true;
+      }
       previousFaceDataRef.current = currentFaceData;
       return;
     }
 
     // Instant capture: skip stability and countdown, capture immediately
-    if (fullConfig.instantCapture && !state.isActive) {
+    // Only fires when armed (requires conditions to go invalid first)
+    if (fullConfig.instantCapture && !state.isActive && instantCaptureArmedRef.current) {
+      instantCaptureArmedRef.current = false;
       setState({ isActive: true, countdown: 0, isStable: true, canCapture: true });
       (async () => {
         if (!isMountedRef.current) return;
@@ -168,6 +183,7 @@ export const useAutoCapture = (
         if (success) {
           setState({ isStable: false, isActive: false, countdown: 0, canCapture: false });
         } else {
+          instantCaptureArmedRef.current = true;
           setState({ isActive: false, countdown: 0, isStable: false, canCapture: true });
           stabilityStartRef.current = 0;
         }
@@ -206,6 +222,7 @@ export const useAutoCapture = (
     validationDetails,
     isValidForCapture,
     fullConfig.enabled,
+    fullConfig.instantCapture,
     fullConfig.stabilityDuration,
     checkStability,
     startCountdown,
