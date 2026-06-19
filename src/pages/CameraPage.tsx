@@ -191,7 +191,7 @@ const CameraContent: React.FC = () => {
           }}
         >
           <img
-            src={capturedUrl}
+            src={rawPreviewUrl || capturedUrl}
             alt="Foto capturada"
             className="h-full w-full object-cover"
             style={{ transform: isMirrored ? 'scaleX(-1)' : 'none' }}
