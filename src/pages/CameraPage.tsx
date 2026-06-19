@@ -177,16 +177,16 @@ const CameraContent: React.FC = () => {
   // Confirmation screen — 3x4 photo matching capture layout
   if (capturedUrl) {
     return (
-      <div className="relative flex h-full w-full items-center justify-center bg-black">
-        {/* Instruction text — above frame */}
-        <div
-          className="absolute left-0 right-0"
-          style={{ bottom: 'calc(50% + clamp(173px, min(33.75vw, 36.7dvh), 260px) + 24px)' }}
-        >
-          <p className="pointer-events-none text-center text-sm font-medium text-white/70">
-            Ficou boa? Confira antes de salvar.
-          </p>
-        </div>
+      <div
+        className="flex h-full w-full flex-col items-center justify-center gap-6 bg-black px-4"
+        style={{
+          paddingTop: 'max(env(safe-area-inset-top, 16px), 16px)',
+          paddingBottom: 'max(env(safe-area-inset-bottom, 16px), 24px)',
+        }}
+      >
+        <p className="text-center text-sm font-medium text-white/70">
+          Ficou boa? Confira antes de salvar.
+        </p>
 
         {/* 3x4 photo — same size as capture frame */}
         <div
@@ -205,13 +205,7 @@ const CameraContent: React.FC = () => {
         </div>
 
         {/* Action buttons — below frame */}
-        <div
-          className="absolute inset-x-0"
-          style={{
-            top: 'calc(50% + clamp(173px, min(33.75vw, 36.7dvh), 260px) + 24px)',
-          }}
-        >
-          <div className="flex items-start justify-center gap-6">
+        <div className="flex items-start justify-center gap-6">
             {/* Espelhar */}
             <button
               onClick={() => setIsMirrored(prev => !prev)}
@@ -267,7 +261,6 @@ const CameraContent: React.FC = () => {
               </div>
               <span className="text-xs text-white/70">Tirar outra</span>
             </button>
-          </div>
         </div>
       </div>
     );
@@ -276,12 +269,12 @@ const CameraContent: React.FC = () => {
   // Camera view
   return (
     <div
-      className="relative flex h-full w-full items-center justify-center"
+      className="relative flex h-full w-full flex-col"
       style={{ backgroundColor: ambientColor, transition: 'background-color 0.4s ease' }}
     >
       {/* App title + smile toggle */}
       <div
-        className="absolute inset-x-0 top-0 flex flex-col items-center gap-2"
+        className="flex shrink-0 flex-col items-center gap-2"
         style={{ paddingTop: 'max(env(safe-area-inset-top, 20px), 48px)' }}
       >
         <h1
@@ -321,28 +314,29 @@ const CameraContent: React.FC = () => {
         </button>
       </div>
 
-      {/* Guidance text — absolute above preview frame */}
-      {!isLoading && !isProcessing && (
-        <div className="absolute left-0 right-0" style={{ bottom: 'calc(50% + clamp(173px, min(33.75vw, 36.7dvh), 260px) + 24px)' }}>
-          <GuidanceText
-            isFaceDetected={isFaceDetected}
-            validationDetails={validationDetails}
-            isStable={isStable}
-            smileRequired={smileMode}
-            countdown={countdown}
-          />
-        </div>
-      )}
+      {/* Guidance + preview — vertically centered as a group */}
+      <div className="relative flex min-h-0 flex-1 flex-col items-center justify-center gap-6 px-4">
+        {!isLoading && !isProcessing && (
+          <div className="flex min-h-12 w-full items-center justify-center">
+            <GuidanceText
+              isFaceDetected={isFaceDetected}
+              validationDetails={validationDetails}
+              isStable={isStable}
+              smileRequired={smileMode}
+              countdown={countdown}
+            />
+          </div>
+        )}
 
-      {/* 3x4 video container — hidden during loading so spinner shows centered */}
-      <div
-        className="relative overflow-hidden rounded-2xl"
-        style={{
-          width: 'clamp(195px, min(67.5vw, 41.25dvh), 293px)',
-          height: 'clamp(260px, min(90vw, 55dvh), 390px)',
-          visibility: isLoading ? 'hidden' : 'visible',
-        }}
-      >
+        {/* 3x4 video container — hidden during loading so spinner shows centered */}
+        <div
+          className="relative overflow-hidden rounded-2xl"
+          style={{
+            width: 'clamp(195px, min(67.5vw, 41.25dvh), 293px)',
+            height: 'clamp(260px, min(90vw, 55dvh), 390px)',
+            visibility: isLoading ? 'hidden' : 'visible',
+          }}
+        >
         <ReactMediaPipe
           ref={mediaPipeRef}
           classes={['w-full', 'h-full', 'relative']}
@@ -385,14 +379,15 @@ const CameraContent: React.FC = () => {
             }}
           />
         )}
-      </div>
+        </div>
 
-      <CaptureFlash trigger={flashTrigger} />
+        <CaptureFlash trigger={flashTrigger} />
+      </div>
 
       {/* Color wheel — bottom of capture screen */}
       {isCapturing && !isLoading && (
         <div
-          className="absolute inset-x-0 bottom-0"
+          className="shrink-0"
           style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 16px), 24px)' }}
         >
           <ColorWheel selectedColor={ambientColor} onSelect={handleColorSelect} />
