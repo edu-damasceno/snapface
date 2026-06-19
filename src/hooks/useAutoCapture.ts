@@ -7,6 +7,7 @@ export interface AutoCaptureConfig {
   countdownDuration: number;
   maxMovementThreshold: number;
   maxWidthChangeThreshold: number;
+  instantCapture: boolean;
 }
 
 export interface AutoCaptureState {
@@ -22,6 +23,7 @@ const defaultConfig: AutoCaptureConfig = {
   countdownDuration: 3000,
   maxMovementThreshold: 25,
   maxWidthChangeThreshold: 15,
+  instantCapture: false,
 };
 
 export const useAutoCapture = (
@@ -152,6 +154,24 @@ export const useAutoCapture = (
       if (state.isActive) {
         cancelAutoCapture();
       }
+      previousFaceDataRef.current = currentFaceData;
+      return;
+    }
+
+    // Instant capture: skip stability and countdown, capture immediately
+    if (fullConfig.instantCapture && !state.isActive) {
+      setState({ isActive: true, countdown: 0, isStable: true, canCapture: true });
+      (async () => {
+        if (!isMountedRef.current) return;
+        const success = await onAutoCaptureRef.current();
+        if (!isMountedRef.current) return;
+        if (success) {
+          setState({ isStable: false, isActive: false, countdown: 0, canCapture: false });
+        } else {
+          setState({ isActive: false, countdown: 0, isStable: false, canCapture: true });
+          stabilityStartRef.current = 0;
+        }
+      })();
       previousFaceDataRef.current = currentFaceData;
       return;
     }

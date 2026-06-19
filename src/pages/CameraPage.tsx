@@ -108,6 +108,7 @@ const CameraContent: React.FC = () => {
     {
       enabled: isCapturing,
       countdownDuration: CAPTURE_DELAY_MS,
+      instantCapture: smileMode,
     }
   );
 
