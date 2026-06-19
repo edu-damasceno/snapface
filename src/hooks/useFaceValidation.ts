@@ -92,7 +92,7 @@ export const useFaceValidation = (faceDeviation: number = RELAXED_FACE_DEVIATION
     }
 
     return details;
-  }, [faceDeviation, updateValidationDetails, setIsVisuallyValid, setIsCaptureValid]);
+  }, [faceDeviation, smileRequired, updateValidationDetails, setIsVisuallyValid, setIsCaptureValid]);
 
   return { validate, currentFaceData };
 };

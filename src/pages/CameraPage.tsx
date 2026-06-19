@@ -291,21 +291,30 @@ const CameraContent: React.FC = () => {
         </h1>
         <button
           onClick={() => setSmileMode(prev => !prev)}
-          className="flex items-center justify-center rounded-full transition-opacity active:opacity-70"
-          style={{
-            width: 32,
-            height: 32,
-            backgroundColor: smileMode ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.1)',
-            textShadow: '0 1px 6px rgba(0,0,0,0.6)',
-          }}
+          className="flex flex-col items-center gap-1 transition-opacity active:opacity-70"
           aria-label={smileMode ? 'Desativar captura com sorriso' : 'Ativar captura com sorriso'}
         >
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="h-5 w-5" style={{ color: smileMode ? 'rgba(250,204,21,1)' : 'rgba(255,255,255,0.5)' }}>
-            <circle cx="12" cy="12" r="10" strokeWidth="1.5" />
-            <circle cx="9" cy="10" r="1" fill="currentColor" stroke="none" />
-            <circle cx="15" cy="10" r="1" fill="currentColor" stroke="none" />
-            <path d="M8 14s1.5 2 4 2 4-2 4-2" strokeWidth="1.5" strokeLinecap="round" />
-          </svg>
+          <div
+            className="flex items-center justify-center rounded-full"
+            style={{
+              width: 32,
+              height: 32,
+              backgroundColor: smileMode ? 'rgba(250,204,21,0.25)' : 'rgba(255,255,255,0.1)',
+              border: smileMode ? '1.5px solid rgba(250,204,21,0.6)' : '1.5px solid transparent',
+            }}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="h-5 w-5" style={{ color: smileMode ? 'rgba(250,204,21,1)' : 'rgba(255,255,255,0.4)' }}>
+              <circle cx="12" cy="12" r="10" strokeWidth="1.5" />
+              <circle cx="9" cy="10" r="1" fill="currentColor" stroke="none" />
+              <circle cx="15" cy="10" r="1" fill="currentColor" stroke="none" />
+              <path d="M8 14s1.5 2 4 2 4-2 4-2" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+          </div>
+          {smileMode && (
+            <span className="text-[10px] font-medium" style={{ color: 'rgba(250,204,21,0.9)', textShadow: '0 1px 4px rgba(0,0,0,0.6)' }}>
+              Sorriso
+            </span>
+          )}
         </button>
       </div>
 
