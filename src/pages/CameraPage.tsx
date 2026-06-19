@@ -31,6 +31,7 @@ const CameraContent: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [capturedBlob, setCapturedBlob] = useState<Blob | null>(null);
   const [capturedUrl, setCapturedUrl] = useState<string | null>(null);
+  const [rawPreviewUrl, setRawPreviewUrl] = useState<string | null>(null);
   const [isMirrored, setIsMirrored] = useState(false);
   const [ambientColor, setAmbientColor] = useState(() =>
     localStorage.getItem('snapface-ambient-color') || '#000000'
@@ -45,12 +46,13 @@ const CameraContent: React.FC = () => {
     validate(currentFaceData);
   }, [currentFaceData, validate]);
 
-  // Cleanup blob URL on unmount or when photo changes
+  // Cleanup blob URLs on unmount or when photo changes
   useEffect(() => {
     return () => {
       if (capturedUrl) URL.revokeObjectURL(capturedUrl);
+      if (rawPreviewUrl) URL.revokeObjectURL(rawPreviewUrl);
     };
-  }, [capturedUrl]);
+  }, [capturedUrl, rawPreviewUrl]);
 
   const handleAutoCapture = useCallback(async (): Promise<boolean> => {
     if (!mediaPipeRef.current) return false;
@@ -63,6 +65,9 @@ const CameraContent: React.FC = () => {
       try {
         const image = await mediaPipeRef.current.captureImage();
         const rawBlob = await image.toBlob();
+
+        const rawUrl = URL.createObjectURL(rawBlob);
+        setRawPreviewUrl(rawUrl);
 
         const processedBlob = await processImage(rawBlob, {
           format: DEFAULT_FORMAT,
@@ -107,10 +112,12 @@ const CameraContent: React.FC = () => {
 
   const handleRetake = useCallback(() => {
     if (capturedUrl) URL.revokeObjectURL(capturedUrl);
+    if (rawPreviewUrl) URL.revokeObjectURL(rawPreviewUrl);
     setCapturedBlob(null);
     setCapturedUrl(null);
+    setRawPreviewUrl(null);
     setIsMirrored(false);
-  }, [capturedUrl]);
+  }, [capturedUrl, rawPreviewUrl]);
 
   /** If user toggled mirror, re-encode with horizontal flip; otherwise return original blob */
   const getFinalBlob = useCallback((): Promise<Blob> => {
@@ -184,7 +191,7 @@ const CameraContent: React.FC = () => {
           }}
         >
           <img
-            src={capturedUrl}
+            src={rawPreviewUrl || capturedUrl}
             alt="Foto capturada"
             className="h-full w-full object-cover"
             style={{ transform: isMirrored ? 'scaleX(-1)' : 'none' }}
