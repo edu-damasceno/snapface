@@ -1,3 +1,7 @@
+import { useEffect, useRef } from 'react';
+
+const SWATCH_SIZE = 32;
+
 const AMBIENT_COLORS = [
   { hex: '#000000', label: 'Preto' },
   { hex: '#FFF5E1', label: 'Branco quente' },
@@ -23,10 +27,27 @@ interface ColorWheelProps {
 export { AMBIENT_COLORS };
 
 export const ColorWheel: React.FC<ColorWheelProps> = ({ selectedColor, onSelect }) => {
+  const scrollerRef = useRef<HTMLDivElement>(null);
+
+  // Center the saved color on mount without blocking scroll to the edges
+  useEffect(() => {
+    const scroller = scrollerRef.current;
+    if (!scroller) return;
+    const selected = scroller.querySelector<HTMLElement>('[data-selected="true"]');
+    selected?.scrollIntoView({ inline: 'center', block: 'nearest' });
+  }, []);
+
   return (
     <div
-      className="no-scrollbar flex justify-center gap-3 overflow-x-auto px-8 py-3"
-      style={{ scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch' }}
+      ref={scrollerRef}
+      className="no-scrollbar flex gap-3 overflow-x-auto py-3"
+      style={{
+        scrollSnapType: 'x mandatory',
+        WebkitOverflowScrolling: 'touch',
+        overscrollBehaviorX: 'contain',
+        paddingLeft: `calc(50% - ${SWATCH_SIZE / 2}px)`,
+        paddingRight: `calc(50% - ${SWATCH_SIZE / 2}px)`,
+      }}
     >
       {AMBIENT_COLORS.map(({ hex, label }) => {
         const isSelected = selectedColor === hex;
@@ -36,12 +57,14 @@ export const ColorWheel: React.FC<ColorWheelProps> = ({ selectedColor, onSelect 
           <button
             key={hex}
             aria-label={label}
+            aria-selected={isSelected}
+            data-selected={isSelected ? 'true' : undefined}
             onClick={() => onSelect(hex)}
             className="flex-shrink-0"
             style={{
               scrollSnapAlign: 'center',
-              width: 32,
-              height: 32,
+              width: SWATCH_SIZE,
+              height: SWATCH_SIZE,
               borderRadius: '50%',
               backgroundColor: hex,
               border: isBlack ? '1.5px solid rgba(255,255,255,0.3)' : 'none',
